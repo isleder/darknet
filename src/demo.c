@@ -125,7 +125,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     demo_classes = classes;
     demo_thresh = thresh;
     demo_hier = hier;
+
     printf("Demo\n");
+
     net = load_network(cfgfile, weightfile, 0);
     set_batch_network(net, 1);
     pthread_t detect_thread;
@@ -133,10 +135,14 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
 
     srand(2222222);
 
-    if(filename){
+    if (filename)
+    {
         printf("video file: %s\n", filename);
         cap = cvCaptureFromFile(filename);
-    }else{
+        if(!cap) error("Couldn't open video file.\n");
+    }
+    else
+    {
         cap = cvCaptureFromCAM(cam_index);
 
         if(w){
@@ -148,9 +154,8 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         if(frames){
             cvSetCaptureProperty(cap, CV_CAP_PROP_FPS, frames);
         }
+        if(!cap) error("Couldn't connect to webcam.\n");
     }
-
-    if(!cap) error("Couldn't connect to webcam.\n");
 
     layer l = net->layers[net->n-1];
     demo_detections = l.n*l.w*l.h;
@@ -173,7 +178,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
 
     int count = 0;
     if(!prefix){
-        cvNamedWindow("Demo", CV_WINDOW_NORMAL); 
+        cvNamedWindow("Demo", CV_WINDOW_NORMAL);
         if(fullscreen){
             cvSetWindowProperty("Demo", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
         } else {
@@ -261,7 +266,7 @@ void demo_compare(char *cfg1, char *weight1, char *cfg2, char *weight2, float th
 
     int count = 0;
     if(!prefix){
-        cvNamedWindow("Demo", CV_WINDOW_NORMAL); 
+        cvNamedWindow("Demo", CV_WINDOW_NORMAL);
         if(fullscreen){
             cvSetWindowProperty("Demo", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
         } else {
@@ -296,4 +301,3 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     fprintf(stderr, "Demo needs OpenCV for webcam images.\n");
 }
 #endif
-
