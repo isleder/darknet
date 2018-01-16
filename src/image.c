@@ -547,9 +547,9 @@ void show_image_cv(image p, const char *name, IplImage *disp)
     cvShowImage(buff, disp);
 
 
-
+    #ifdef SAVEVIDEO
     // save video
-
+    // copied from https://github.com/AlexeyAB/darknet/blob/f9b306bd122b2ce332ef537cc4551f6e5abbe0b3/src/image.c#L439
     CvSize size;
     {
         size.width = disp->width, size.height = disp->height;
@@ -569,6 +569,7 @@ void show_image_cv(image p, const char *name, IplImage *disp)
     cvWriteFrame(output_video, disp);
     printf("\n cvWriteFrame \n");
 
+    #endif
 
 
 
