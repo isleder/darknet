@@ -9,6 +9,8 @@
 #include "box.h"
 #include "darknet.h"
 
+#define SAVEVIDEO
+
 #ifndef __cplusplus
 #ifdef OPENCV
 int fill_image_from_stream(CvCapture *cap, image im);
@@ -63,4 +65,3 @@ void copy_image_into(image src, image dest);
 image get_image_layer(image m, int l);
 
 #endif
-

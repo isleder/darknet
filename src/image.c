@@ -288,16 +288,14 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
-
-            //TODO switch label to bottom when on top
-
-
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
 
             if (alphabet) {
                 image label = get_label(alphabet, labelstr, (im.h*.03)/10);
                 //if (top == 0) top = bot + 20;
+                //TODO switch label to bottom when on top
                 draw_label(im, top + width, left, label, rgb);
+                draw_target_info(im, top, left, right, bot, red, green, blue);
                 free_image(label);
             }
 
@@ -522,17 +520,26 @@ void show_image_cv(image p, const char *name, IplImage *disp)
     sprintf(buff, "%s", name);
 
     int step = disp->widthStep;
+
+    //printf("widthStep %d\n", disp->widthStep);
+
     cvNamedWindow(buff, CV_WINDOW_NORMAL);
     //cvMoveWindow(buff, 100*(windows%10) + 200*(windows/10), 100*(windows%10));
     ++windows;
-    for(y = 0; y < p.h; ++y){
-        for(x = 0; x < p.w; ++x){
-            for(k= 0; k < p.c; ++k){
-                disp->imageData[y*step + x*p.c + k] = (unsigned char)(get_pixel(p,x,y,k)*255);
+
+    for(y = 0; y < p.h; ++y) // height rows
+    {
+        for(x = 0; x < p.w; ++x) // width cols
+        {
+            for(k= 0; k < p.c; ++k)
+            {
+                disp->imageData[y * step + x * p.c + k] = (unsigned char)(get_pixel(p,x,y,k) * 255);
             }
         }
     }
-    if(0){
+
+    if(0)
+    {
         int w = 448;
         int h = w*p.h/p.w;
         if(h > 1000){
@@ -549,20 +556,32 @@ void show_image_cv(image p, const char *name, IplImage *disp)
 
     #ifdef SAVEVIDEO
     // save video
-    // copied from https://github.com/AlexeyAB/darknet/blob/f9b306bd122b2ce332ef537cc4551f6e5abbe0b3/src/image.c#L439
+    // from https://github.com/AlexeyAB/darknet/blob/f9b306bd122b2ce332ef537cc4551f6e5abbe0b3/src/image.c#L439
     CvSize size;
     {
         size.width = disp->width, size.height = disp->height;
     }
 
+    printf("width %d height %d\n", size.width, size.height);
+
     static CvVideoWriter* output_video = NULL;    // cv::VideoWriter output_video;
     if (output_video == NULL)
     {
         printf("\n SRC output_video = %p \n", output_video);
-        const char* output_name = "test_dnn_out.avi";
+        //const char* output_name = "out.avi";
         //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('H', '2', '6', '4'), 25, size, 1);
-        output_video = cvCreateVideoWriter(output_name, CV_FOURCC('D', 'I', 'V', 'X'), 30, size, 1);
         //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('M', 'J', 'P', 'G'), 25, size, 1);
+        //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('D', 'I', 'V', 'X'), 30, size, 1);
+
+
+        const char* output_name = "out.mp4";
+        //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('X', '2', '6', '4'), 30, size, 1);
+        //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('H', '2', '6', '4'), 30, size, 1);
+        //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('X', 'V', 'I', 'D'), 30, size, 1);
+        output_video = cvCreateVideoWriter(output_name, CV_FOURCC('M', 'P', '4', 'V'), 30, size, 1);
+
+
+
         printf("\n cvCreateVideoWriter, DST output_video = %p  \n", output_video);
     }
 
@@ -570,10 +589,6 @@ void show_image_cv(image p, const char *name, IplImage *disp)
     printf("\n cvWriteFrame \n");
 
     #endif
-
-
-
-
 
 
 
@@ -956,13 +971,17 @@ void letterbox_image_into(image im, int w, int h, image boxed)
 {
     int new_w = im.w;
     int new_h = im.h;
-    if (((float)w/im.w) < ((float)h/im.h)) {
+    if (((float)w/im.w) < ((float)h/im.h))
+    {
         new_w = w;
         new_h = (im.h * w)/im.w;
+        //printf("resize image to %d x %d\n",new_w,new_h);
     } else {
         new_h = h;
         new_w = (im.w * h)/im.h;
     }
+
+
     image resized = resize_image(im, new_w, new_h);
     embed_image(resized, boxed, (w-new_w)/2, (h-new_h)/2);
     free_image(resized);
@@ -1623,4 +1642,24 @@ void free_image(image m)
     if(m.data){
         free(m.data);
     }
+}
+
+void draw_target_info(image im, int top, int left, int right, int bot, int red, int green, int blue)
+{
+    float CameraFOV_rad = 60 * M_PI / 180;
+    float targetsize = 0.2; // meter
+
+    //int h = bot - top;
+    int w = right - left;
+
+    //if (h > w) w = h;
+
+    float pixangle = CameraFOV_rad / im.w;
+    float distance = targetsize / tan(w * pixangle);
+
+
+    //float eul_y = pixangle * ()
+    //float eul_z = pixangle * (left + right - im.w) / 2;
+
+    printf("Draw target info top %d left %d right %d bot %d\n", top, left, right, bot);
 }
