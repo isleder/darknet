@@ -61,6 +61,7 @@ static float get_pixel_extend(image m, int x, int y, int c)
     if(c < 0 || c >= m.c) return 0;
     return get_pixel(m, x, y, c);
 }
+// image, x, y, color, val
 static void set_pixel(image m, int x, int y, int c, float val)
 {
     if (x < 0 || y < 0 || c < 0 || x >= m.w || y >= m.h || c >= m.c) return;
@@ -145,17 +146,24 @@ image get_label(image **characters, char *string, int size)
     return b;
 }
 
-void draw_label(image a, int r, int c, image label, const float *rgb)
+// image, row, column, bottom, label, rgb color
+void draw_label(image a, int r, int c, int b, image label, const float *rgb)
 {
     int w = label.w;
     int h = label.h;
-    if (r - h >= 0) r = r - h;
+    if (r - h >= 0) r = r - h; // move label above bbox r row by h
+    else if (b + h < a.h) r = b; // set label on bottom
 
     int i, j, k;
-    for(j = 0; j < h && j + r < a.h; ++j){
-        for(i = 0; i < w && i + c < a.w; ++i){
-            for(k = 0; k < label.c; ++k){
+
+    for(j = 0; j < h && j + r < a.h; ++j) // each rows
+    {
+        for(i = 0; i < w && i + c < a.w; ++i) // each cols
+        {
+            for(k = 0; k < label.c; ++k) // each color
+            {
                 float val = get_pixel(label, i, j, k);
+                // image, x, y, color, val
                 set_pixel(a, i+c, j+r, k, rgb[k] * val);
             }
         }
@@ -197,7 +205,7 @@ void draw_box(image a, int x1, int y1, int x2, int y2, float r, float g, float b
         a.data[x2 + i*a.w + 2*a.w*a.h] = b;
     }
 }
-
+// img, left, top, right, bot, height, red, green, blue
 void draw_box_width(image a, int x1, int y1, int x2, int y2, int w, float r, float g, float b)
 {
     int i;
@@ -239,27 +247,36 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
 {
     int i,j;
 
-    for(i = 0; i < num; ++i){
+    for(i = 0; i < num; ++i)
+    {
         char labelstr[4096] = {0};
         int class = -1;
-        for(j = 0; j < classes; ++j){
-            if (probs[i][j] > thresh){
-                if (class < 0) {
+
+        for(j = 0; j < classes; ++j)
+        {
+            if (probs[i][j] > thresh)
+            {
+                if (class < 0)
+                {
                     strcat(labelstr, names[j]);
                     class = j;
-                } else {
+                }
+                else
+                {
                     strcat(labelstr, ", ");
                     strcat(labelstr, names[j]);
                 }
                 printf("%s: %.0f%%\n", names[j], probs[i][j]*100);
             }
         }
-        if(class >= 0){
-            int width = im.h * .006;
+
+        if(class >= 0)
+        {
+            int height = im.h * .006;
 
             /*
                if(0){
-               width = pow(prob, 1./2.)*10+1;
+               height = pow(prob, 1./2.)*10+1;
                alphabet = 0;
                }
              */
@@ -271,8 +288,7 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
             float blue = get_color(0,offset,classes);
             float rgb[3];
 
-            //width = prob*20+2;
-
+            //height = prob*20+2;
             rgb[0] = red;
             rgb[1] = green;
             rgb[2] = blue;
@@ -288,18 +304,21 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
-            draw_box_width(im, left, top, right, bot, width, red, green, blue);
+            draw_box_width(im, left, top, right, bot, height, red, green, blue);
 
-            if (alphabet) {
+            if (alphabet)
+            {
                 image label = get_label(alphabet, labelstr, (im.h*.03)/10);
                 //if (top == 0) top = bot + 20;
                 //TODO switch label to bottom when on top
-                draw_label(im, top + width, left, label, rgb);
+
+                draw_label(im, top + height, left, bot, label, rgb);
                 draw_target_info(im, top, left, right, bot, red, green, blue);
                 free_image(label);
             }
 
-            if (masks){
+            if (masks)
+            {
                 image mask = float_to_image(14, 14, 1, masks[i]);
                 image resized_mask = resize_image(mask, b.w*im.w, b.h*im.h);
                 image tmask = threshold_image(resized_mask, .5);
@@ -556,7 +575,7 @@ void show_image_cv(image p, const char *name, IplImage *disp)
 
     #ifdef SAVEVIDEO
     // save video
-    // from https://github.com/AlexeyAB/darknet/blob/f9b306bd122b2ce332ef537cc4551f6e5abbe0b3/src/image.c#L439
+    // source https://github.com/AlexeyAB/darknet/blob/f9b306bd122b2ce332ef537cc4551f6e5abbe0b3/src/image.c#L439
     CvSize size;
     {
         size.width = disp->width, size.height = disp->height;
@@ -567,6 +586,7 @@ void show_image_cv(image p, const char *name, IplImage *disp)
     static CvVideoWriter* output_video = NULL;    // cv::VideoWriter output_video;
     if (output_video == NULL)
     {
+        // trying different video formats
         printf("\n SRC output_video = %p \n", output_video);
         //const char* output_name = "out.avi";
         //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('H', '2', '6', '4'), 25, size, 1);
