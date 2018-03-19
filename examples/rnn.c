@@ -100,8 +100,8 @@ float_pair get_seq2seq_data(char **source, char **dest, int n, int characters, s
     float *y = calloc(batch * steps * characters, sizeof(float));
     for(i = 0; i < batch; ++i){
         int index = rand()%n;
-        int slen = strlen(source[index]);
-        int dlen = strlen(dest[index]);
+        //int slen = strlen(source[index]);
+        //int dlen = strlen(dest[index]);
         for(j = 0; j < steps; ++j){
             unsigned char curr = source[index][j];
             unsigned char next = dest[index][j];
@@ -160,6 +160,7 @@ void train_char_rnn(char *cfgfile, char *weightfile, char *filename, int clear, 
     unsigned char *text = 0;
     int *tokens = 0;
     size_t size;
+
     if(tokenized){
         tokens = read_tokenized_data(filename, &size);
     } else {
@@ -232,6 +233,8 @@ void train_char_rnn(char *cfgfile, char *weightfile, char *filename, int clear, 
     char buff[256];
     sprintf(buff, "%s/%s_final.weights", backup_directory, base);
     save_weights(net, buff);
+
+    if (text != NULL) free(text);
 }
 
 void print_symbol(int n, char **tokens){
