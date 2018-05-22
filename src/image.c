@@ -320,7 +320,10 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
-            draw_box_width(im, left, top, right, bot, height, red, green, blue);
+//            draw_box_width(im, left, top, right, bot, height, red, green, blue);
+            draw_box(im, left, top, right, bot, red, green, blue);
+
+            draw_crosshair(im, (left+right)/2, (top+bot)/2, 30, red, green, blue);
 
 
             // TODO get these from configuration
@@ -369,7 +372,7 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
                 int sz = strlen(labelstr);
                 snprintf(&labelstr[sz], sizeof(labelstr) - sz, " %.1fm %.1f %.1f", distance, yaw, pitch);
 
-                image label = get_label(alphabet, labelstr, (im.h*.03)/10);
+                image label = get_label(alphabet, labelstr, (im.h*.02)/10);
                 draw_label(im, top + height, left, bot, label, rgb);
                 free_image(label);
 
@@ -1726,78 +1729,45 @@ void free_image(image m)
     }
 }
 
-//void draw_target_info(image im, int top, int left, int right, int bot, int red, int green, int blue)
-void draw_target_info(image a, int r, int c, int b, image label, const float *rgb)
+void draw_crosshair(image a, int xc, int yc, int d, float r, float g, float b)
 {
-    printf("draw crosshair and text %d %d %d\n",r,c,b);
+    int i, x1, y1, x2, y2;
+/*
+    x2 = x1 + d;
+    xc = (x1 + x2) / 2;
+    y2 = y1 + d;
+    yc = (y1 + y2) / 2;
+*/
 
-    int w = label.w;
-    int h = label.h;
-    //if (r - h >= 0) r = r - h; // move label above bbox r row by h
-    //else if (b + h < a.h) r = b; // set label on bottom
+    x1 = xc - d / 2;
+    x2 = x1 + d;
+    y1 = yc - d / 2;
+    y2 = y1 + d;
 
-    r = b;
+    if (x1 < 0) x1 = 0;
+    if (x1 >= a.w) x1 = a.w - 1;
+    if (x2 < 0) x2 = 0;
+    if (x2 >= a.w) x2 = a.w - 1;
 
-    int i, j, k;
+    if (y1 < 0) y1 = 0;
+    if (y1 >= a.h) y1 = a.h - 1;
+    if (y2 < 0) y2 = 0;
+    if (y2 >= a.h) y2 = a.h - 1;
 
-    for(j = 0; j < h && j + r < a.h; ++j) // each rows
+    int wh = a.w * a.h; // color page
+    int yw = yc * a.w;
+
+    for (i = x1; i < x2; ++i)
     {
-        for(i = 0; i < w && i + c < a.w; ++i) // each cols
-        {
-            for(k = 0; k < label.c; ++k) // each color
-            {
-                float val = get_pixel(label, i, j, k);
-                // image, x, y, color, val
-                set_pixel(a, i+c, j+r, k, rgb[k] * val);
-            }
-        }
+        a.data[i + yw] = r;
+        a.data[i + yw + wh] = g;
+        a.data[i + yw + 2 * wh] = b;
     }
 
-
-
-    /*
-    // TODO get these from configuration
-    const float CameraFOVH_rad = 60 * M_PI / 180;
-    const float targetsize = 0.2; // meter
-
-    float CameraFOVV_rad = CameraFOVH_rad * im.h / im.w;
-
-    //int h = bot - top;
-    int w = right - left;
-
-    float pixangle = CameraFOVH_rad / im.w;
-    float distance = targetsize / tan(w * pixangle);
-
-
-    // TODO draw crosshair
-*/
-    /* Angles measure from center image
-        + pitch angle when target is closer to top
-        + yaw angle when target is right from center
-        target yaw and pitch values
-
-    */
-    /*
-    float x_offs2x = (float)(left + right - im.w);
-    float y_offs2x = (float)(top + bot - im.h);
-    */
-
-    /*
-    alpha = cam_fovh
-    w = frame pixel width
-    d = distance camera and center of plane
-    b = horiz pixel distance from center
-    beta = angle of target from center point
-
-    tan(alpha/2) = w/2/d => d = w / (2 * tan(alpha/2))
-    tan(beta) = b / d
-    beta = atan(2 * b * tan(alpha/2) / w)
-    */
-/*
-    float yaw = atan2(x_offs2x * tan(CameraFOVH_rad / 2), im.w);
-    float pitch = atan2(y_offs2x * tan(CameraFOVV_rad / 2), im.h);
-
-
-    printf("Draw target info top %d left %d right %d bot %d yaw %f pitch %f\n", top, left, right, bot, yaw, pitch);
-    */
+    for (i = y1; i < y2; ++i)
+    {
+        a.data[xc + i * a.w] = r;
+        a.data[xc + i * a.w + wh] = g;
+        a.data[xc + i * a.w + 2 * wh] = b;
+    }
 }
