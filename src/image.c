@@ -146,6 +146,7 @@ image get_label(image **characters, char *string, int size)
     return b;
 }
 
+// draws label to bbox
 // image, row, column, bottom, label, rgb color
 void draw_label(image a, int r, int c, int b, image label, const float *rgb)
 {
@@ -184,7 +185,8 @@ void draw_box(image a, int x1, int y1, int x2, int y2, float r, float g, float b
     if(y2 < 0) y2 = 0;
     if(y2 >= a.h) y2 = a.h-1;
 
-    for(i = x1; i <= x2; ++i){
+    for(i = x1; i <= x2; ++i)
+    {
         a.data[i + y1*a.w + 0*a.w*a.h] = r;
         a.data[i + y2*a.w + 0*a.w*a.h] = r;
 
@@ -194,7 +196,9 @@ void draw_box(image a, int x1, int y1, int x2, int y2, float r, float g, float b
         a.data[i + y1*a.w + 2*a.w*a.h] = b;
         a.data[i + y2*a.w + 2*a.w*a.h] = b;
     }
-    for(i = y1; i <= y2; ++i){
+
+    for(i = y1; i <= y2; ++i)
+    {
         a.data[x1 + i*a.w + 0*a.w*a.h] = r;
         a.data[x2 + i*a.w + 0*a.w*a.h] = r;
 
@@ -209,7 +213,8 @@ void draw_box(image a, int x1, int y1, int x2, int y2, float r, float g, float b
 void draw_box_width(image a, int x1, int y1, int x2, int y2, int w, float r, float g, float b)
 {
     int i;
-    for(i = 0; i < w; ++i){
+    for(i = 0; i < w; ++i)
+    {
         draw_box(a, x1+i, y1+i, x2-i, y2-i, r, g, b);
     }
 }
@@ -222,7 +227,8 @@ void draw_bbox(image a, box bbox, int w, float r, float g, float b)
     int bot   = (bbox.y+bbox.h/2)*a.h;
 
     int i;
-    for(i = 0; i < w; ++i){
+    for(i = 0; i < w; ++i)
+    {
         draw_box(a, left+i, top+i, right-i, bot-i, r, g, b);
     }
 }
@@ -230,11 +236,16 @@ void draw_bbox(image a, box bbox, int w, float r, float g, float b)
 image **load_alphabet()
 {
     int i, j;
+
     const int nsize = 8;
     image **alphabets = calloc(nsize, sizeof(image));
-    for(j = 0; j < nsize; ++j){
+
+    for(j = 0; j < nsize; ++j)
+    {
         alphabets[j] = calloc(128, sizeof(image));
-        for(i = 32; i < 127; ++i){
+
+        for(i = 32; i < 127; ++i)
+        {
             char buff[256];
             sprintf(buff, "data/labels/%d_%d.png", i, j);
             alphabets[j][i] = load_image_color(buff, 0, 0);
@@ -243,16 +254,19 @@ image **load_alphabet()
     return alphabets;
 }
 
+// image, number of detections, detection threshold, ...
 void draw_detections(image im, int num, float thresh, box *boxes, float **probs, float **masks, char **names, image **alphabet, int classes)
 {
     int i,j;
 
-    for(i = 0; i < num; ++i)
+    for (i = 0; i < num; ++i)
     {
         char labelstr[4096] = {0};
         int class = -1;
+        float class_prob = -1;
 
-        for(j = 0; j < classes; ++j)
+        // print to console classes and probabilities
+        for (j = 0; j < classes; ++j)
         {
             if (probs[i][j] > thresh)
             {
@@ -260,6 +274,7 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
                 {
                     strcat(labelstr, names[j]);
                     class = j;
+                    class_prob = probs[i][j];
                 }
                 else
                 {
@@ -270,9 +285,9 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
             }
         }
 
-        if(class >= 0)
+        if (class >= 0)
         {
-            int height = im.h * .006;
+            int height = im.h * .006; // scale label height to image height
 
             /*
                if(0){
@@ -282,6 +297,7 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
              */
 
             //printf("%d %s: %.0f%%\n", i, names[class], prob*100);
+            // pick color for each class
             int offset = class*123457 % classes;
             float red = get_color(2,offset,classes);
             float green = get_color(1,offset,classes);
@@ -306,15 +322,61 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
 
             draw_box_width(im, left, top, right, bot, height, red, green, blue);
 
+
+            // TODO get these from configuration
+            const float CameraFOVH_rad = 60 * M_PI / 180;
+            const float targetsize = 0.2; // meter
+
+            float CameraFOVV_rad = CameraFOVH_rad * im.h / im.w;
+
+            //int h = bot - top;
+            int w = right - left;
+
+            float pixangle = CameraFOVH_rad / im.w;
+            float distance = targetsize / tan(w * pixangle);
+
+            /* Angles measure from center image
+                + pitch angle when target is closer to top
+                + yaw angle when target is right from center
+                target yaw and pitch values
+            */
+            float x_offs2x = (float)(left + right - im.w);
+            float y_offs2x = (float)(top + bot - im.h);
+
+            /*
+            alpha = cam_fovh
+            w = frame pixel width
+            d = distance camera and center of plane
+            b = horiz pixel distance from center
+            beta = angle of target from center point
+
+            tan(alpha/2) = w/2/d => d = w / (2 * tan(alpha/2))
+            tan(beta) = b / d
+            beta = atan(2 * b * tan(alpha/2) / w)
+            */
+
+            float yaw = atan2(x_offs2x * tan(CameraFOVH_rad / 2), im.w);
+            float pitch = atan2(y_offs2x * tan(CameraFOVV_rad / 2), im.h);
+
+            // convert to degree temporarily
+            yaw = yaw * 180 / M_PI;
+            pitch = pitch * 180 / M_PI;
+
+            printf("top %d left %d right %d bot %d yaw %f pitch %f\n", top, left, right, bot, yaw, pitch);
+
             if (alphabet)
             {
-                image label = get_label(alphabet, labelstr, (im.h*.03)/10);
-                //if (top == 0) top = bot + 20;
-                //TODO switch label to bottom when on top
+                int sz = strlen(labelstr);
+                snprintf(&labelstr[sz], sizeof(labelstr) - sz, " %.1fm %.1f %.1f", distance, yaw, pitch);
 
+                image label = get_label(alphabet, labelstr, (im.h*.03)/10);
                 draw_label(im, top + height, left, bot, label, rgb);
-                draw_target_info(im, top, left, right, bot, red, green, blue);
                 free_image(label);
+
+                //label = get_label(alphabet, labelstr, (im.h*.03)/10);
+                //draw_target_info(im, top + height, left, bot, label, rgb);
+                //draw_target_info(im, top, left, right, bot, red, green, blue);
+                //free_image(label);
             }
 
             if (masks)
@@ -1664,22 +1726,78 @@ void free_image(image m)
     }
 }
 
-void draw_target_info(image im, int top, int left, int right, int bot, int red, int green, int blue)
+//void draw_target_info(image im, int top, int left, int right, int bot, int red, int green, int blue)
+void draw_target_info(image a, int r, int c, int b, image label, const float *rgb)
 {
-    float CameraFOV_rad = 60 * M_PI / 180;
-    float targetsize = 0.2; // meter
+    printf("draw crosshair and text %d %d %d\n",r,c,b);
+
+    int w = label.w;
+    int h = label.h;
+    //if (r - h >= 0) r = r - h; // move label above bbox r row by h
+    //else if (b + h < a.h) r = b; // set label on bottom
+
+    r = b;
+
+    int i, j, k;
+
+    for(j = 0; j < h && j + r < a.h; ++j) // each rows
+    {
+        for(i = 0; i < w && i + c < a.w; ++i) // each cols
+        {
+            for(k = 0; k < label.c; ++k) // each color
+            {
+                float val = get_pixel(label, i, j, k);
+                // image, x, y, color, val
+                set_pixel(a, i+c, j+r, k, rgb[k] * val);
+            }
+        }
+    }
+
+
+
+    /*
+    // TODO get these from configuration
+    const float CameraFOVH_rad = 60 * M_PI / 180;
+    const float targetsize = 0.2; // meter
+
+    float CameraFOVV_rad = CameraFOVH_rad * im.h / im.w;
 
     //int h = bot - top;
     int w = right - left;
 
-    //if (h > w) w = h;
-
-    float pixangle = CameraFOV_rad / im.w;
+    float pixangle = CameraFOVH_rad / im.w;
     float distance = targetsize / tan(w * pixangle);
 
 
-    //float eul_y = pixangle * ()
-    //float eul_z = pixangle * (left + right - im.w) / 2;
+    // TODO draw crosshair
+*/
+    /* Angles measure from center image
+        + pitch angle when target is closer to top
+        + yaw angle when target is right from center
+        target yaw and pitch values
 
-    printf("Draw target info top %d left %d right %d bot %d\n", top, left, right, bot);
+    */
+    /*
+    float x_offs2x = (float)(left + right - im.w);
+    float y_offs2x = (float)(top + bot - im.h);
+    */
+
+    /*
+    alpha = cam_fovh
+    w = frame pixel width
+    d = distance camera and center of plane
+    b = horiz pixel distance from center
+    beta = angle of target from center point
+
+    tan(alpha/2) = w/2/d => d = w / (2 * tan(alpha/2))
+    tan(beta) = b / d
+    beta = atan(2 * b * tan(alpha/2) / w)
+    */
+/*
+    float yaw = atan2(x_offs2x * tan(CameraFOVH_rad / 2), im.w);
+    float pitch = atan2(y_offs2x * tan(CameraFOVV_rad / 2), im.h);
+
+
+    printf("Draw target info top %d left %d right %d bot %d yaw %f pitch %f\n", top, left, right, bot, yaw, pitch);
+    */
 }

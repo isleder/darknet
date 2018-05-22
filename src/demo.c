@@ -49,20 +49,29 @@ void *detect_in_thread(void *ptr)
 
     memcpy(predictions[demo_index], prediction, l.outputs*sizeof(float));
     mean_arrays(predictions, demo_frame, l.outputs, avg);
+
     l.output = avg;
-    if(l.type == DETECTION){
+
+    if (l.type == DETECTION)
+    {
         get_detection_boxes(l, 1, 1, demo_thresh, probs, boxes, 0);
-    } else if (l.type == REGION){
+    }
+    else if (l.type == REGION)
+    {
         get_region_boxes(l, buff[0].w, buff[0].h, net->w, net->h, demo_thresh, probs, boxes, 0, 0, 0, demo_hier, 1);
-    } else {
+    }
+    else
+    {
         error("Last layer must produce detections\n");
     }
+
     if (nms > 0) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
 
     printf("\033[2J");
     printf("\033[1;1H");
     printf("\nFPS:%.1f\n",fps);
     printf("Objects:\n\n");
+
     image display = buff[(buff_index+2) % 3];
     draw_detections(display, demo_detections, demo_thresh, boxes, probs, 0, demo_names, demo_alphabet, demo_classes);
 
@@ -115,7 +124,12 @@ void *detect_loop(void *ptr)
     }
 }
 
-void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
+// Demo runs when run with args: darknet detector demo
+// darknet detector demo cfg/voc.data cfg/tiny-yolo-voc.cfg tiny-yolo-voc.weights -c 1
+void demo(char *cfgfile, char *weightfile, float thresh, int cam_index,
+            const char *filename, char **names, int classes, int delay,
+            char *prefix, int avg_frames, float hier, int w, int h, int frames,
+            int fullscreen)
 {
     demo_frame = avg_frames;
     predictions = calloc(demo_frame, sizeof(float*));
@@ -126,10 +140,11 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     demo_thresh = thresh;
     demo_hier = hier;
 
-    printf("Demo\n");
+    printf("Demo w:%d h:%d fn:%s\n", w, h, filename);
 
     net = load_network(cfgfile, weightfile, 0);
     set_batch_network(net, 1);
+
     pthread_t detect_thread;
     pthread_t fetch_thread;
 
@@ -159,14 +174,23 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
 
     layer l = net->layers[net->n-1];
     demo_detections = l.n*l.w*l.h;
+
     int j;
 
     avg = (float *) calloc(l.outputs, sizeof(float));
-    for(j = 0; j < demo_frame; ++j) predictions[j] = (float *) calloc(l.outputs, sizeof(float));
+
+    for (j = 0; j < demo_frame; ++j)
+    {
+        predictions[j] = (float *) calloc(l.outputs, sizeof(float));
+    }
 
     boxes = (box *)calloc(l.w*l.h*l.n, sizeof(box));
     probs = (float **)calloc(l.w*l.h*l.n, sizeof(float *));
-    for(j = 0; j < l.w*l.h*l.n; ++j) probs[j] = (float *)calloc(l.classes+1, sizeof(float));
+
+    for(j = 0; j < l.w*l.h*l.n; ++j)
+    {
+        probs[j] = (float *)calloc(l.classes+1, sizeof(float));
+    }
 
     buff[0] = get_image_from_stream(cap);
     buff[1] = copy_image(buff[0]);
@@ -177,11 +201,17 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     ipl = cvCreateImage(cvSize(buff[0].w,buff[0].h), IPL_DEPTH_8U, buff[0].c);
 
     int count = 0;
-    if(!prefix){
+
+    if (!prefix)
+    {
         cvNamedWindow("Demo", CV_WINDOW_NORMAL);
-        if(fullscreen){
+
+        if (fullscreen)
+        {
             cvSetWindowProperty("Demo", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
-        } else {
+        }
+        else
+        {
             cvMoveWindow("Demo", 0, 0);
             cvResizeWindow("Demo", 1352, 1013);
         }
@@ -189,19 +219,25 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
 
     demo_time = what_time_is_it_now();
 
-    while(!demo_done){
+    while (!demo_done)
+    {
         buff_index = (buff_index + 1) %3;
         if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
         if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
-        if(!prefix){
+
+        if (!prefix)
+        {
             fps = 1./(what_time_is_it_now() - demo_time);
             demo_time = what_time_is_it_now();
             display_in_thread(0);
-        }else{
+        }
+        else
+        {
             char name[256];
             sprintf(name, "%s_%08d", prefix, count);
             save_image(buff[(buff_index + 1)%3], name);
         }
+
         pthread_join(fetch_thread, 0);
         pthread_join(detect_thread, 0);
         ++count;
@@ -218,7 +254,9 @@ void demo_compare(char *cfg1, char *weight1, char *cfg2, char *weight2, float th
     demo_classes = classes;
     demo_thresh = thresh;
     demo_hier = hier;
+
     printf("Demo\n");
+
     net = load_network(cfg1, weight1, 0);
     set_batch_network(net, 1);
     pthread_t detect_thread;
