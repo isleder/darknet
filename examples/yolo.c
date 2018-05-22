@@ -278,30 +278,41 @@ void test_yolo(char *cfgfile, char *weightfile, char *filename, float thresh)
     box *boxes = calloc(l.side*l.side*l.n, sizeof(box));
     float **probs = calloc(l.side*l.side*l.n, sizeof(float *));
     for(j = 0; j < l.side*l.side*l.n; ++j) probs[j] = calloc(l.classes, sizeof(float *));
-    while(1){
-        if(filename){
+
+    while(1)
+    {
+        if(filename)
+        {
             strncpy(input, filename, 256);
-        } else {
+        }
+        else
+        {
             printf("Enter Image Path: ");
             fflush(stdout);
             input = fgets(input, 256, stdin);
             if(!input) return;
             strtok(input, "\n");
         }
+
         image im = load_image_color(input,0,0);
         image sized = resize_image(im, net->w, net->h);
         float *X = sized.data;
         time=clock();
+
         network_predict(net, X);
         printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
+
         get_detection_boxes(l, 1, 1, thresh, probs, boxes, 0);
+
         if (nms) do_nms_sort(boxes, probs, l.side*l.side*l.n, l.classes, nms);
         draw_detections(im, l.side*l.side*l.n, thresh, boxes, probs, 0, voc_names, alphabet, 20);
+
         save_image(im, "predictions");
         show_image(im, "predictions");
 
         free_image(im);
         free_image(sized);
+
 #ifdef OPENCV
         cvWaitKey(0);
         cvDestroyAllWindows();
@@ -312,6 +323,8 @@ void test_yolo(char *cfgfile, char *weightfile, char *filename, float thresh)
 
 void run_yolo(int argc, char **argv)
 {
+    printf("run_yolo\n");
+
     char *prefix = find_char_arg(argc, argv, "-prefix", 0);
     float thresh = find_float_arg(argc, argv, "-thresh", .2);
     int cam_index = find_int_arg(argc, argv, "-c", 0);
