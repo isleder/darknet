@@ -4,6 +4,8 @@
 #include "cuda.h"
 #include <stdio.h>
 #include <math.h>
+#include "quaternion.h"
+#include "estimator.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -308,7 +310,24 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
             draw_crosshair(im, (left+right)/2, (top+bot)/2, 30, red, green, blue);
 
+            struct euler_t eul;
+            struct quaternion_t quat;
+            float distance;
+
+            estimate_yaw_pitch_dist(im.w, im.h, left, top, right, bot, &eul, &quat, &distance);
+
+            // convert to degree temporarily
+            float yaw = eul.z * 180 / M_PI;
+            float pitch = eul.y * 180 / M_PI;
+
+            printf("top %d left %d right %d bot %d yaw %f pitch %f w %f x %f y %f z %f\n",
+                    top, left, right, bot, yaw, pitch, quat.w, quat.x, quat.y, quat.z);
+
+
             if (alphabet) {
+                int sz = strlen(labelstr);
+                snprintf(&labelstr[sz], sizeof(labelstr) - sz, " %.1fm %.1f %.1f", distance, yaw, pitch);
+
                 image label = get_label(alphabet, labelstr, (im.h*.03));
                 draw_label(im, top + width, left, label, rgb);
                 free_image(label);
