@@ -9,8 +9,6 @@
 #include "box.h"
 #include "darknet.h"
 
-#define SAVEVIDEO
-
 #ifndef __cplusplus
 #ifdef OPENCV
 int fill_image_from_stream(CvCapture *cap, image im);
@@ -24,12 +22,10 @@ void show_image_cv(image p, const char *name, IplImage *disp);
 float get_color(int c, int x, int max);
 void draw_box(image a, int x1, int y1, int x2, int y2, float r, float g, float b);
 void draw_bbox(image a, box bbox, int w, float r, float g, float b);
-void draw_label(image a, int r, int c, int b, image label, const float *rgb);
 void write_label(image a, int r, int c, image *characters, char *string, float *rgb);
 image image_distance(image a, image b);
 void scale_image(image m, float s);
 image rotate_crop_image(image im, float rad, float s, int w, int h, float dx, float dy, float aspect);
-image center_crop_image(image im, int w, int h);
 image random_crop_image(image im, int w, int h);
 image random_augment_image(image im, float angle, float aspect, int low, int high, int w, int h);
 augment_args random_augment_args(image im, float angle, float aspect, int low, int high, int w, int h);
@@ -63,7 +59,6 @@ image make_empty_image(int w, int h, int c);
 void copy_image_into(image src, image dest);
 
 image get_image_layer(image m, int l);
-void draw_crosshair(image a, int x1, int y1, int d, float r, float g, float b);
-
 
 #endif
+
