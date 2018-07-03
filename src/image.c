@@ -273,7 +273,8 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             }
         }
         if(class >= 0){
-            int width = im.h * .006;
+            //int width = im.h * .006;
+            int width = 1;
 
             /*
                if(0){
@@ -320,8 +321,8 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             float yaw = eul.z * 180 / M_PI;
             float pitch = eul.y * 180 / M_PI;
 
-            printf("top %d left %d right %d bot %d yaw %f pitch %f w %f x %f y %f z %f\n",
-                    top, left, right, bot, yaw, pitch, quat.w, quat.x, quat.y, quat.z);
+            printf("w %d h %d top %d left %d right %d bot %d yaw %f pitch %f w %f x %f y %f z %f\n",
+                    im.w, im.h, top, left, right, bot, yaw, pitch, quat.w, quat.x, quat.y, quat.z);
 
 
             if (alphabet) {
