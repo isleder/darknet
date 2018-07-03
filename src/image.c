@@ -61,6 +61,7 @@ static float get_pixel_extend(image m, int x, int y, int c)
     if(c < 0 || c >= m.c) return 0;
     return get_pixel(m, x, y, c);
 }
+// image, x, y, color, val
 static void set_pixel(image m, int x, int y, int c, float val)
 {
     if (x < 0 || y < 0 || c < 0 || x >= m.w || y >= m.h || c >= m.c) return;
@@ -81,8 +82,8 @@ static float bilinear_interpolate(image im, float x, float y, int c)
     float dx = x - ix;
     float dy = y - iy;
 
-    float val = (1-dy) * (1-dx) * get_pixel_extend(im, ix, iy, c) + 
-        dy     * (1-dx) * get_pixel_extend(im, ix, iy+1, c) + 
+    float val = (1-dy) * (1-dx) * get_pixel_extend(im, ix, iy, c) +
+        dy     * (1-dx) * get_pixel_extend(im, ix, iy+1, c) +
         (1-dy) *   dx   * get_pixel_extend(im, ix+1, iy, c) +
         dy     *   dx   * get_pixel_extend(im, ix+1, iy+1, c);
     return val;
@@ -124,7 +125,7 @@ image tile_images(image a, image b, int dx)
     if(a.w == 0) return copy_image(b);
     image c = make_image(a.w + b.w + dx, (a.h > b.h) ? a.h : b.h, (a.c > b.c) ? a.c : b.c);
     fill_cpu(c.w*c.h*c.c, 1, c.data, 1);
-    embed_image(a, c, 0, 0); 
+    embed_image(a, c, 0, 0);
     composite_image(b, c, a.w + dx, 0);
     return c;
 }
@@ -153,10 +154,15 @@ void draw_label(image a, int r, int c, image label, const float *rgb)
     if (r - h >= 0) r = r - h;
 
     int i, j, k;
-    for(j = 0; j < h && j + r < a.h; ++j){
-        for(i = 0; i < w && i + c < a.w; ++i){
-            for(k = 0; k < label.c; ++k){
+
+    for(j = 0; j < h && j + r < a.h; ++j) // each rows
+    {
+        for(i = 0; i < w && i + c < a.w; ++i) // each cols
+        {
+            for(k = 0; k < label.c; ++k) // each color
+            {
                 float val = get_pixel(label, i, j, k);
+                // image, x, y, color, val
                 set_pixel(a, i+c, j+r, k, rgb[k] * val);
             }
         }
@@ -177,7 +183,8 @@ void draw_box(image a, int x1, int y1, int x2, int y2, float r, float g, float b
     if(y2 < 0) y2 = 0;
     if(y2 >= a.h) y2 = a.h-1;
 
-    for(i = x1; i <= x2; ++i){
+    for(i = x1; i <= x2; ++i)
+    {
         a.data[i + y1*a.w + 0*a.w*a.h] = r;
         a.data[i + y2*a.w + 0*a.w*a.h] = r;
 
@@ -187,7 +194,9 @@ void draw_box(image a, int x1, int y1, int x2, int y2, float r, float g, float b
         a.data[i + y1*a.w + 2*a.w*a.h] = b;
         a.data[i + y2*a.w + 2*a.w*a.h] = b;
     }
-    for(i = y1; i <= y2; ++i){
+
+    for(i = y1; i <= y2; ++i)
+    {
         a.data[x1 + i*a.w + 0*a.w*a.h] = r;
         a.data[x2 + i*a.w + 0*a.w*a.h] = r;
 
@@ -198,11 +207,12 @@ void draw_box(image a, int x1, int y1, int x2, int y2, float r, float g, float b
         a.data[x2 + i*a.w + 2*a.w*a.h] = b;
     }
 }
-
+// img, left, top, right, bot, height, red, green, blue
 void draw_box_width(image a, int x1, int y1, int x2, int y2, int w, float r, float g, float b)
 {
     int i;
-    for(i = 0; i < w; ++i){
+    for(i = 0; i < w; ++i)
+    {
         draw_box(a, x1+i, y1+i, x2-i, y2-i, r, g, b);
     }
 }
@@ -215,7 +225,8 @@ void draw_bbox(image a, box bbox, int w, float r, float g, float b)
     int bot   = (bbox.y+bbox.h/2)*a.h;
 
     int i;
-    for(i = 0; i < w; ++i){
+    for(i = 0; i < w; ++i)
+    {
         draw_box(a, left+i, top+i, right-i, bot-i, r, g, b);
     }
 }
@@ -225,9 +236,13 @@ image **load_alphabet()
     int i, j;
     const int nsize = 8;
     image **alphabets = calloc(nsize, sizeof(image));
-    for(j = 0; j < nsize; ++j){
+
+    for(j = 0; j < nsize; ++j)
+    {
         alphabets[j] = calloc(128, sizeof(image));
-        for(i = 32; i < 127; ++i){
+
+        for(i = 32; i < 127; ++i)
+        {
             char buff[256];
             sprintf(buff, "data/labels/%d_%d.png", i, j);
             alphabets[j][i] = load_image_color(buff, 0, 0);
@@ -291,6 +306,8 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             if(bot > im.h-1) bot = im.h-1;
 
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
+            draw_crosshair(im, (left+right)/2, (top+bot)/2, 30, red, green, blue);
+
             if (alphabet) {
                 image label = get_label(alphabet, labelstr, (im.h*.03));
                 draw_label(im, top + width, left, label, rgb);
@@ -546,7 +563,7 @@ void show_image_cv(image p, const char *name, IplImage *disp)
     sprintf(buff, "%s", name);
 
     int step = disp->widthStep;
-    cvNamedWindow(buff, CV_WINDOW_NORMAL); 
+    cvNamedWindow(buff, CV_WINDOW_NORMAL);
     //cvMoveWindow(buff, 100*(windows%10) + 200*(windows/10), 100*(windows%10));
     ++windows;
     for(y = 0; y < p.h; ++y){
@@ -569,6 +586,47 @@ void show_image_cv(image p, const char *name, IplImage *disp)
         cvReleaseImage(&buffer);
     }
     cvShowImage(buff, disp);
+
+
+    #ifdef SAVEVIDEO
+    // save video
+    // source https://github.com/AlexeyAB/darknet/blob/f9b306bd122b2ce332ef537cc4551f6e5abbe0b3/src/image.c#L439
+    CvSize size;
+    {
+        size.width = disp->width, size.height = disp->height;
+    }
+
+    printf("width %d height %d\n", size.width, size.height);
+
+    static CvVideoWriter* output_video = NULL;    // cv::VideoWriter output_video;
+    if (output_video == NULL)
+    {
+        // trying different video formats
+        printf("\n SRC output_video = %p \n", output_video);
+        //const char* output_name = "out.avi";
+        //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('H', '2', '6', '4'), 25, size, 1);
+        //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('M', 'J', 'P', 'G'), 25, size, 1);
+        //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('D', 'I', 'V', 'X'), 30, size, 1);
+
+
+        const char* output_name = "out.mp4";
+        //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('X', '2', '6', '4'), 30, size, 1);
+        //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('H', '2', '6', '4'), 30, size, 1);
+        //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('X', 'V', 'I', 'D'), 30, size, 1);
+        output_video = cvCreateVideoWriter(output_name, CV_FOURCC('M', 'P', '4', 'V'), 30, size, 1);
+
+
+
+        printf("\n cvCreateVideoWriter, DST output_video = %p  \n", output_video);
+    }
+
+    cvWriteFrame(output_video, disp);
+    printf("\n cvWriteFrame \n");
+
+    #endif
+
+
+
 }
 #endif
 
@@ -791,7 +849,7 @@ void place_image(image im, int w, int h, int dx, int dy, image canvas)
 
 image center_crop_image(image im, int w, int h)
 {
-    int m = (im.w < im.h) ? im.w : im.h;   
+    int m = (im.w < im.h) ? im.w : im.h;
     image c = crop_image(im, (im.w - m) / 2, (im.h - m)/2, m, m);
     image r = resize_image(c, w, h);
     free_image(c);
@@ -953,7 +1011,7 @@ void letterbox_image_into(image im, int w, int h, image boxed)
         new_w = (im.w * h)/im.h;
     }
     image resized = resize_image(im, new_w, new_h);
-    embed_image(resized, boxed, (w-new_w)/2, (h-new_h)/2); 
+    embed_image(resized, boxed, (w-new_w)/2, (h-new_h)/2);
     free_image(resized);
 }
 
@@ -973,7 +1031,7 @@ image letterbox_image(image im, int w, int h)
     fill_image(boxed, .5);
     //int i;
     //for(i = 0; i < boxed.w*boxed.h*boxed.c; ++i) boxed.data[i] = 0;
-    embed_image(resized, boxed, (w-new_w)/2, (h-new_h)/2); 
+    embed_image(resized, boxed, (w-new_w)/2, (h-new_h)/2);
     free_image(resized);
     return boxed;
 }
@@ -1239,7 +1297,7 @@ image blend_image(image fore, image back, float alpha)
     for(k = 0; k < fore.c; ++k){
         for(j = 0; j < fore.h; ++j){
             for(i = 0; i < fore.w; ++i){
-                float val = alpha * get_pixel(fore, i, j, k) + 
+                float val = alpha * get_pixel(fore, i, j, k) +
                     (1 - alpha)* get_pixel(back, i, j, k);
                 set_pixel(blend, i, j, k, val);
             }
@@ -1346,7 +1404,7 @@ void saturate_exposure_image(image im, float sat, float exposure)
 
 image resize_image(image im, int w, int h)
 {
-    image resized = make_image(w, h, im.c);   
+    image resized = make_image(w, h, im.c);
     image part = make_image(w, im.h, im.c);
     int r, c, k;
     float w_scale = (float)(im.w - 1) / (w - 1);
@@ -1543,7 +1601,7 @@ image collapse_images_vert(image *ims, int n)
         free_image(copy);
     }
     return filters;
-} 
+}
 
 image collapse_images_horz(image *ims, int n)
 {
@@ -1579,7 +1637,7 @@ image collapse_images_horz(image *ims, int n)
         free_image(copy);
     }
     return filters;
-} 
+}
 
 void show_image_normalized(image im, const char *name)
 {
@@ -1611,5 +1669,48 @@ void free_image(image m)
 {
     if(m.data){
         free(m.data);
+    }
+}
+
+void draw_crosshair(image a, int xc, int yc, int d, float r, float g, float b)
+{
+    int i, x1, y1, x2, y2;
+/*
+    x2 = x1 + d;
+    xc = (x1 + x2) / 2;
+    y2 = y1 + d;
+    yc = (y1 + y2) / 2;
+*/
+
+    x1 = xc - d / 2;
+    x2 = x1 + d;
+    y1 = yc - d / 2;
+    y2 = y1 + d;
+
+    if (x1 < 0) x1 = 0;
+    if (x1 >= a.w) x1 = a.w - 1;
+    if (x2 < 0) x2 = 0;
+    if (x2 >= a.w) x2 = a.w - 1;
+
+    if (y1 < 0) y1 = 0;
+    if (y1 >= a.h) y1 = a.h - 1;
+    if (y2 < 0) y2 = 0;
+    if (y2 >= a.h) y2 = a.h - 1;
+
+    int wh = a.w * a.h; // color page
+    int yw = yc * a.w;
+
+    for (i = x1; i < x2; ++i)
+    {
+        a.data[i + yw] = r;
+        a.data[i + yw + wh] = g;
+        a.data[i + yw + 2 * wh] = b;
+    }
+
+    for (i = y1; i < y2; ++i)
+    {
+        a.data[xc + i * a.w] = r;
+        a.data[xc + i * a.w + wh] = g;
+        a.data[xc + i * a.w + 2 * wh] = b;
     }
 }
