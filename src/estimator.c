@@ -11,16 +11,24 @@ void estimate_yaw_pitch_dist(int im_w, int im_h, int left, int top, int right, i
                             struct euler_t *eul, struct quaternion_t *quat, float *distance)
 {
     // TODO get these from configuration
-    const float CameraFOVH_rad = 60 * M_PI / 180;
+
+    const float CameraFOVH_rad = 81 * M_PI / 180;
     const float targetsize = 0.2; // meter
 
     double CameraFOVV_rad = CameraFOVH_rad * im_h / im_w;
+    // multiplier based on constants and camera settings
+    const float m = im_w * targetsize * 2 * tan(CameraFOVH_rad / 2);
 
     //int h = bot - top;
-    int w = right - left;
+    float w = (float)(right - left);
 
+/*
     double pixangle = CameraFOVH_rad / im_w;
     *distance = targetsize / tan(w * pixangle);
+*/
+
+
+    *distance =  m / w;
 
     double x_offs2x = (double)(left + right - im_w);
     double y_offs2x = (double)(top + bot - im_h);
