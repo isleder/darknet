@@ -12,7 +12,8 @@ void estimate_yaw_pitch_dist(int im_w, int im_h, int left, int top, int right, i
 {
     // TODO get these from configuration
 
-    const float CameraFOVH_rad = 81 * M_PI / 180;
+
+    const float CameraFOVH_rad = MICROSOFT_FOVH * M_PI / 180;
     const float targetsize = 0.2; // meter
 
     double CameraFOVV_rad = CameraFOVH_rad * im_h / im_w;

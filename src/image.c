@@ -636,7 +636,6 @@ void show_image_cv(image p, const char *name, IplImage *disp)
         output_video = cvCreateVideoWriter(output_name, CV_FOURCC('M', 'P', '4', 'V'), 30, size, 1);
 
 
-
         printf("\n cvCreateVideoWriter, DST output_video = %p  \n", output_video);
     }
 
